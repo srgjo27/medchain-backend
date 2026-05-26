@@ -7,9 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model User {
@@ -51,6 +49,7 @@ model MedicalRecord {
   user               User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
   blockchain_records BlockchainRecord[]
 
+  @@index([user_id])
   @@map("medical_records")
 }
 
@@ -79,6 +78,7 @@ model BlockchainRecord {
 
   medical_record MedicalRecord @relation(fields: [medical_record_id], references: [id], onDelete: Cascade)
 
+  @@index([medical_record_id])
   @@map("blockchain_records")
 }
 
@@ -86,7 +86,7 @@ model AccessGrant {
   id             String   @id @default(uuid()) @db.Uuid
   owner_id       String   @db.Uuid
   record_ids     String[] @db.Uuid
-  token          String   @db.VarChar(64)
+  token          String   @unique @db.VarChar(64)
   berlaku_hingga DateTime @db.Timestamp
   is_revoked     Boolean  @default(false) @db.Boolean
   allow_download Boolean  @db.Boolean
@@ -95,6 +95,7 @@ model AccessGrant {
   owner       User        @relation(fields: [owner_id], references: [id], onDelete: Cascade)
   access_logs AccessLog[]
 
+  @@index([owner_id])
   @@map("access_grants")
 }
 
@@ -114,5 +115,6 @@ model AccessLog {
 
   grant AccessGrant @relation(fields: [grant_id], references: [id], onDelete: Cascade)
 
+  @@index([grant_id])
   @@map("access_logs")
 }
