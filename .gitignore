@@ -2,3 +2,5 @@ node_modules/
 .env
 .agents/
 dist/
+
+/src/generated/prisma
