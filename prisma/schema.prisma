@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String    @id @default(uuid()) @db.Uuid
+  nama_lengkap      String    @db.VarChar(100)
+  email             String    @unique @db.VarChar(255)
+  nik               String    @unique @db.Char(16)
+  password_hash     String    @db.Text
+  email_verified_at DateTime? @db.Timestamp
+  created_at        DateTime  @default(now()) @db.Timestamp
+
+  medical_records MedicalRecord[]
+  access_grants   AccessGrant[]
+
+  @@map("users")
+}
+
+enum KategoriMedis {
+  lab
+  radiologi
+  resep
+  rujukan
+  vaksin
+  lainnya
+}
+
+model MedicalRecord {
+  id              String        @id @default(uuid()) @db.Uuid
+  user_id         String        @db.Uuid
+  judul           String        @db.VarChar(200)
+  kategori        KategoriMedis
+  file_url        String        @db.Text
+  file_hash       String        @db.Char(64)
+  tanggal_dokumen DateTime      @db.Date
+  catatan         String?       @db.Text
+  is_deleted      Boolean       @default(false) @db.Boolean
+  uploaded_at     DateTime      @default(now()) @db.Timestamp
+
+  user               User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  blockchain_records BlockchainRecord[]
+
+  @@map("medical_records")
+}
+
+enum BlockchainActionType {
+  store
+  revoke
+}
+
+enum BlockchainStatus {
+  pending
+  confirmed
+  failed
+}
+
+model BlockchainRecord {
+  id                String               @id @default(uuid()) @db.Uuid
+  medical_record_id String               @db.Uuid
+  tx_hash           String               @db.VarChar(100)
+  action_type       BlockchainActionType
+  network           String               @db.VarChar(30)
+  block_number      BigInt?              @db.BigInt
+  status            BlockchainStatus
+  gas_used          Int?                 @db.Integer
+  created_at        DateTime             @default(now()) @db.Timestamp
+  confirmed_at      DateTime?            @db.Timestamp
+
+  medical_record MedicalRecord @relation(fields: [medical_record_id], references: [id], onDelete: Cascade)
+
+  @@map("blockchain_records")
+}
+
+model AccessGrant {
+  id             String   @id @default(uuid()) @db.Uuid
+  owner_id       String   @db.Uuid
+  record_ids     String[] @db.Uuid
+  token          String   @db.VarChar(64)
+  berlaku_hingga DateTime @db.Timestamp
+  is_revoked     Boolean  @default(false) @db.Boolean
+  allow_download Boolean  @db.Boolean
+  created_at     DateTime @default(now()) @db.Timestamp
+
+  owner       User        @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  access_logs AccessLog[]
+
+  @@map("access_grants")
+}
+
+enum AccessLogAction {
+  view
+  download
+  verify
+}
+
+model AccessLog {
+  id          String          @id @default(uuid()) @db.Uuid
+  grant_id    String          @db.Uuid
+  ip_address  String          @db.VarChar(45)
+  user_agent  String          @db.Text
+  action      AccessLogAction
+  accessed_at DateTime        @default(now()) @db.Timestamp
+
+  grant AccessGrant @relation(fields: [grant_id], references: [id], onDelete: Cascade)
+
+  @@map("access_logs")
+}
